@@ -10,17 +10,18 @@
 (def tree-text-parser
   (instaparse/parser "
 <document> = <space>* ( tree | <space> )*
-tree =  <'('> <space>* word (tree | word | <space> | literal )* <')'>
+tree =  <'('> <space>* word ( (<space>+ tree) | (<space>+ word) | (<space>+ literal) )* <')'>
 literal = <'(**'> <space> word <space> literal-content* <'**)'>
 <literal-content> = !'**)' #'(.|\\n)'
-<word> = #'[\\S&&[^()]]+'
+word = letter+
+<letter> = !('(**' | '**)') #'[\\S&&[^()]]'
 <space> = <#'\\s'>
-
 "))
 
 (defn parse [text]
   (->> (tree-text-parser text)
-       (instaparse/transform {:literal (fn [type & body] (vector :tree type (apply str body)))}))  )
+       (instaparse/transform {:literal (fn [type & body] (vector :tree type (apply str body)))
+                              :word str}))  )
 
 (defn transform [tree transformer]
   (instaparse/transform {:tree (fn [& children]
@@ -63,10 +64,13 @@ literal = <'(**'> <space> word <space> literal-content* <'**)'>
 
 ")
 
+(def test-text-3 "(foo bar)")
+
 (deftest test
-  #_(is (= (instaparse/parse tree-text-parser test-text) nil))
-  (is (= (transform (parse test-text)
-                    (fn [children] children))
+  #_(is (= (instaparse/parse tree-text-parser test-text-3) nil))
+  (is (= (parse test-text) nil))
+  #_(is (= (transform (parse test-text)
+                      (fn [children] children))
            nil)))
 
 (run-tests)

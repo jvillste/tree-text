@@ -37,12 +37,13 @@
                     (words-to-string (take-while string? children))]
                    (drop-while string? children))))
 
-
-
 (defn meeting-body-to-hiccup [all-children]
   (let [children (rest all-children)]
     (case (first all-children)
-      ":meeting" (drop 1 children)
+      ":meeting" (let [metadata (first children)
+                       date (:date metadata)]
+                   (into [:div [:h1 (str (:title metadata) " ") [:small (str (:day date) "." (:month date) "." (:year date))] ]]
+                         (interpose [:hr] (drop 1 children))))
       "?" (dialog-item "question" "?" children)
       "-" (dialog-item "minus" "-" children)
       "+" (dialog-item "plus" "+" children)
@@ -54,12 +55,11 @@
       [(words-to-string all-children)])))
 
 (defn generate-html [source target]
-  (let [tree (tree-text/parse (slurp source))]
+  (let [tree (tree-text/parse (slurp source))
+        body (first (tree-text/transform tree
+                                         meeting-body-to-hiccup))]
     (spit target
-          (page (first (tree-text/transform tree
-                                            meeting-body-to-hiccup))))))
+          (page body))))
 
 (generate-html "/Users/jukka/Dropbox/Public/Vaalit 2014/eurovaalityöryhmä_2014_04_06/eurovaalityöryhmä_2014_04_06.ttxt"
                "/Users/jukka/Dropbox/Public/Vaalit 2014/eurovaalityöryhmä_2014_04_06/index.html")
-
-(run-tests)
